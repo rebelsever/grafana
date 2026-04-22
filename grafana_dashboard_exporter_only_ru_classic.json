@@ -1,0 +1,1260 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Как читать этот дэшборд",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "content": "**Time picker влияет на все панели Prometheus**: нагрузку API, latency, давление на пул, давление на PostgreSQL и ранжированные списки endpoint'ов.  \n**SQL-панели для DBA показывают текущее состояние** PostgreSQL/Pangolin: они отображают состояние БД *прямо сейчас* (сессии, ожидания, блокировки, горячие таблицы).\n\nСамые важные ранжированные списки уже показаны сразу:\n- **Лучшие кандидаты на кеширование** — read-методы с наибольшей стоимостью с учетом трафика\n- **Самые тяжелые методы в целом** — наибольшая практическая нагрузка на пути API/БД\n- **Самые медленные методы по p95** — нестабильные endpoint'ы с тяжелым хвостом\n- **Медленные write-методы** — обычно слабые кандидаты на кеширование",
+        "mode": "markdown"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "RPS API",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Общая скорость входящих запросов.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval]))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "p95 latency API",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Общее p95 времени ответа API.",
+      "gridPos": {
+        "x": 4,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval])))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Утилизация пула соединений",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Утилизация пула соединений к БД со стороны приложения.",
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(jdbc_connections_active{job=~\"$job_app\"}) / clamp_min(sum(jdbc_connections_max{job=~\"$job_app\"}),1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Ожидающие соединения",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Очередь ожидания соединения с БД в Hikari.",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(hikaricp_connections_pending{job=~\"$job_app\"})",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Backend-сессии PostgreSQL",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Количество backend-сессий, подключенных к PostgreSQL.",
+      "gridPos": {
+        "x": 16,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(pg_stat_database_numbackends{job=~\"$job_db\",datname=~\"$datname\"})",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Коэффициент cache hit PostgreSQL",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Доля чтений из shared buffers.",
+      "gridPos": {
+        "x": 20,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pg_stat_database_blks_hit{job=~\"$job_db\",datname=~\"$datname\"}[$__rate_interval]))\n/\nclamp_min(\n  sum(rate(pg_stat_database_blks_hit{job=~\"$job_db\",datname=~\"$datname\"}[$__rate_interval])) +\n  sum(rate(pg_stat_database_blks_read{job=~\"$job_db\",datname=~\"$datname\"}[$__rate_interval])),\n  0.000001\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Трафик API и ошибки 5xx",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Историческая динамика RPS API и частоты серверных ошибок.",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "RPS"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\",status=~\"5..\"}[$__rate_interval]))",
+          "refId": "B",
+          "legendFormat": "Частота 5xx"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Динамика latency API",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Историческая динамика хвостовой latency.",
+      "gridPos": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval])))",
+          "refId": "C",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Давление на пул и БД",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Давление на пул соединений, temp files и deadlocks на выбранном интервале.",
+      "gridPos": {
+        "x": 16,
+        "y": 8,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(jdbc_connections_active{job=~\"$job_app\"}) / clamp_min(sum(jdbc_connections_max{job=~\"$job_app\"}),1)",
+          "refId": "A",
+          "legendFormat": "Утилизация пула"
+        },
+        {
+          "expr": "sum(hikaricp_connections_pending{job=~\"$job_app\"})",
+          "refId": "B",
+          "legendFormat": "Ожидающие соединения"
+        },
+        {
+          "expr": "sum(rate(pg_stat_database_temp_bytes{job=~\"$job_db\",datname=~\"$datname\"}[$__rate_interval]))",
+          "refId": "C",
+          "legendFormat": "temp bytes/с"
+        },
+        {
+          "expr": "sum(increase(pg_stat_database_deadlocks{job=~\"$job_db\",datname=~\"$datname\"}[$__rate_interval]))",
+          "refId": "D",
+          "legendFormat": "deadlocks"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "bargauge",
+      "title": "Лучшие кандидаты на кеширование (GET/HEAD, с учетом трафика × latency)",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Read-endpoint'ы с наибольшей стоимостью ответа с учетом трафика. Сильные кандидаты на Redis в первую очередь.",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 6,
+        "h": 10
+      },
+      "targets": [
+        {
+          "expr": "topk($topn,\n(\n  sum by (uri, method) (rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\",method=~\"GET|HEAD\"}[$__rate_interval]))\n  *\n  (\n    sum by (uri, method) (rate(http_server_requests_seconds_sum{job=~\"$job_app\",uri!~\".*actuator.*\",method=~\"GET|HEAD\"}[$__rate_interval]))\n    /\n    clamp_min(sum by (uri, method) (rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\",method=~\"GET|HEAD\"}[$__rate_interval])), 0.000001)\n  )\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": false,
+        "minVizHeight": 12,
+        "minVizWidth": 0
+      }
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Самые тяжелые методы в целом (трафик × средняя latency)",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Наибольшие практические источники нагрузки на пути API/БД.",
+      "gridPos": {
+        "x": 6,
+        "y": 16,
+        "w": 6,
+        "h": 10
+      },
+      "targets": [
+        {
+          "expr": "topk($topn,\n(\n  sum by (uri, method) (rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval]))\n  *\n  (\n    sum by (uri, method) (rate(http_server_requests_seconds_sum{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval]))\n    /\n    clamp_min(sum by (uri, method) (rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval])), 0.000001)\n  )\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": false,
+        "minVizHeight": 12,
+        "minVizWidth": 0
+      }
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "Самые медленные методы по p95 latency",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Endpoint'ы с наихудшей хвостовой latency на выбранном интервале.",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 6,
+        "h": 10
+      },
+      "targets": [
+        {
+          "expr": "topk($topn,\nhistogram_quantile(\n  0.95,\n  sum by (uri, method, le) (rate(http_server_requests_seconds_bucket{job=~\"$job_app\",uri!~\".*actuator.*\"}[$__rate_interval]))\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": false,
+        "minVizHeight": 12,
+        "minVizWidth": 0
+      }
+    },
+    {
+      "id": 14,
+      "type": "bargauge",
+      "title": "Медленные write-методы (обычно плохие кандидаты на кеш)",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Нечитающие endpoint'ы с высокой средней latency. Обычно сначала оптимизируют SQL и транзакции.",
+      "gridPos": {
+        "x": 18,
+        "y": 16,
+        "w": 6,
+        "h": 10
+      },
+      "targets": [
+        {
+          "expr": "topk($topn,\n(\n  sum by (uri, method) (rate(http_server_requests_seconds_sum{job=~\"$job_app\",uri!~\".*actuator.*\",method!~\"GET|HEAD|OPTIONS\"}[$__rate_interval]))\n  /\n  clamp_min(sum by (uri, method) (rate(http_server_requests_seconds_count{job=~\"$job_app\",uri!~\".*actuator.*\",method!~\"GET|HEAD|OPTIONS\"}[$__rate_interval])), 0.000001)\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{method}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": false,
+        "minVizHeight": 12,
+        "minVizWidth": 0
+      }
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Текущая сводка по блокировкам",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Сводка по блокировкам из postgres_exporter. Показывает число lock'ов по режиму и признаку granted.",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "sum by (mode, granted) (pg_locks_count{job=~\"$job_db\",datname=~\"$datname\"})",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "Топ таблиц по последовательным сканированиям",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Таблицы с наибольшим накопленным числом seq scan по данным postgres_exporter.",
+      "gridPos": {
+        "x": 8,
+        "y": 26,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "topk(15, pg_stat_user_tables_seq_scan{job=~\"$job_db\",datname=~\"$datname\"})",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "Топ таблиц по доле dead tuples",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Таблицы с наибольшей долей dead tuples.",
+      "gridPos": {
+        "x": 16,
+        "y": 26,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "topk(15,\n(\n  pg_stat_user_tables_n_dead_tup{job=~\"$job_db\",datname=~\"$datname\"}\n  /\n  clamp_min(\n    pg_stat_user_tables_n_dead_tup{job=~\"$job_db\",datname=~\"$datname\"} +\n    pg_stat_user_tables_n_live_tup{job=~\"$job_db\",datname=~\"$datname\"},\n    1\n  )\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "Топ таблиц по низкому index scan ratio",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Таблицы, где доля индексных сканирований минимальна. Индикатор проблем с планами и индексами.",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "topk(15,\n(\n  1 -\n  (\n    pg_stat_user_tables_idx_scan{job=~\"$job_db\",datname=~\"$datname\"}\n    /\n    clamp_min(\n      pg_stat_user_tables_idx_scan{job=~\"$job_db\",datname=~\"$datname\"} +\n      pg_stat_user_tables_seq_scan{job=~\"$job_db\",datname=~\"$datname\"},\n      1\n    )\n  )\n)\n)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Топ таблиц по dead tuples (абсолютное значение)",
+      "datasource": "$DS_PROMETHEUS",
+      "description": "Таблицы с наибольшим абсолютным числом dead tuples.",
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "expr": "topk(15, pg_stat_user_tables_n_dead_tup{job=~\"$job_db\",datname=~\"$datname\"})",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "__auto"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ]
+        },
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "api",
+    "postgres",
+    "prometheus",
+    "postgres_exporter",
+    "cache-candidates",
+    "dba"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "label": "Источник Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "includeAll": false,
+        "multi": false,
+        "hide": 0,
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "options": []
+      },
+      {
+        "name": "job_app",
+        "label": "Job приложения",
+        "type": "query",
+        "datasource": "$DS_PROMETHEUS",
+        "definition": "label_values(http_server_requests_seconds_count, job)",
+        "query": {
+          "query": "label_values(http_server_requests_seconds_count, job)",
+          "refId": "PromVarAppJob"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "job_db",
+        "label": "Job БД",
+        "type": "query",
+        "datasource": "$DS_PROMETHEUS",
+        "definition": "label_values(pg_stat_database_numbackends, job)",
+        "query": {
+          "query": "label_values(pg_stat_database_numbackends, job)",
+          "refId": "PromVarDbJob"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "datname",
+        "label": "База данных",
+        "type": "query",
+        "datasource": "$DS_PROMETHEUS",
+        "definition": "label_values(pg_stat_database_numbackends{job=~\"$job_db\"}, datname)",
+        "query": {
+          "query": "label_values(pg_stat_database_numbackends{job=~\"$job_db\"}, datname)",
+          "refId": "PromVarDatname"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "topn",
+        "label": "Топ N",
+        "type": "custom",
+        "query": "5,10,15,20",
+        "current": {
+          "selected": true,
+          "text": "10",
+          "value": "10"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "5",
+            "value": "5"
+          },
+          {
+            "selected": true,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": false,
+            "text": "15",
+            "value": "15"
+          },
+          {
+            "selected": false,
+            "text": "20",
+            "value": "20"
+          }
+        ]
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Дэшборд API ↔ PostgreSQL (только Prometheus/postgres_exporter) — classic model",
+  "uid": "hybrid-api-postgres-sql",
+  "version": 1,
+  "weekStart": "",
+  "description": "Classic JSON model для импорта в Grafana. Все DBA-метрики берутся из Prometheus через postgres_exporter. PostgreSQL SQL datasource не требуется."
+}
